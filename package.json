@@ -1,0 +1,9 @@
+import { createClient } from "@supabase/supabase-js";
+
+// Created on demand (not at import time) so a missing env var never breaks
+// the build — it only matters when a page actually talks to the database.
+export function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
+  return createClient(url, key);
+}
