@@ -1,146 +1,194 @@
 import { getCurrentMember } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 import { visibleVisibilities } from "@/lib/visibility";
-import RsvpButton from "@/components/RsvpButton";
-import AddToCalendar from "@/components/AddToCalendar";
+import RegisterInterest from "@/components/RegisterInterest";
 
 export const dynamic = "force-dynamic";
 
-type Invitation = {
+type Fund = {
   id: number;
-  type: string;
-  title: string;
-  starts_at: string | null;
-  capacity: number | null;
+  name: string;
+  kind: string | null;
+  minimum: string | null;
+  status: string;
   body: string | null;
   visibility: string;
 };
-type Rsvp = { invitation_id: number; member_id: number; status: string };
+type Reg = {
+  opportunity_id: number;
+  member_id: number;
+  created_at: string | null;
+  ir_status: string;
+};
 
-function fmtDate(iso: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return (
-    d.toLocaleDateString("en-GB", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    }) +
-    " · " +
-    d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
-  );
-}
+const STATUS_STYLE: Record<string, string> = {
+  open: "text-cobalt bg-cobalt/5",
+  "closing soon": "text-amber-700 bg-amber-50",
+  closed: "text-ink/45 bg-ink/5",
+};
 
-export default async function Invitations() {
+export default async function Funds() {
   const me = await getCurrentMember();
   const sb = getSupabase();
-  const allowed = visibleVisibilities(me?.role ?? null);
+  const isMember = me && me.role !== "prospect";
+  const isEditor = me && (me.role === "editor" || me.role === "admin");
 
-  const { data } = await sb
-    .from("invitations")
-    .select("*")
-    .in("visibility", allowed)
-    .order("starts_at");
-  const items = (data as Invitation[]) ?? [];
-  const events = items.filter((i) => i.type === "event");
-  const calls = items.filter((i) => i.type === "call");
-
-  const ids = items.map((i) => i.id);
-  let rsvps: Rsvp[] = [];
-  if (ids.length) {
-    const { data: rData } = await sb
-      .from("rsvps")
-      .select("invitation_id,member_id,status")
-      .in("invitation_id", ids);
-    rsvps = (rData as Rsvp[]) ?? [];
+  if (!isMember) {
+    return (
+      <div className="bg-white rounded-2xl ring-1 ring-ink/10 p-8 max-w-xl">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-cobalt mb-3">
+          Members only
+        </p>
+        <h1 className="font-display text-2xl mb-3">
+          Fund opportunities are for members
+        </h1>
+        <p className="text-ink/55">
+          Fund content is restricted to eligible investors. Switch to a member
+          (e.g. Eleanor) using the control top right.
+        </p>
+      </div>
+    );
   }
 
-  const goingCount = (id: number) =>
-    rsvps.filter((r) => r.invitation_id === id && r.status === "going").length;
-  const waitCount = (id: number) =>
-    rsvps.filter((r) => r.invitation_id === id && r.status === "waitlist").length;
-  const myStatus = (id: number) =>
-    me
-      ? rsvps.find((r) => r.invitation_id === id && r.member_id === me.id)
-          ?.status ?? null
-      : null;
+  const allowed = visibleVisibilities(me!.role);
+  const { data: fData } = await sb
+    .from("fund_opportunities")
+    .select("*")
+    .in("visibility", allowed)
+    .order("id");
+  const funds = (fData as Fund[]) ?? [];
+
+  const { data: myRegData } = await sb
+    .from("interest_registrations")
+    .select("opportunity_id")
+    .eq("member_id", me!.id);
+  const myRegs = new Set(
+    (myRegData ?? []).map((r: { opportunity_id: number }) => r.opportunity_id)
+  );
+
+  // Editor IR inbox.
+  let inbox: { name: string; member: string; when: string; status: string }[] =
+    [];
+  if (isEditor) {
+    const { data: regData } = await sb
+      .from("interest_registrations")
+      .select("opportunity_id,member_id,created_at,ir_status")
+      .order("created_at", { ascending: false });
+    const regs = (regData as Reg[]) ?? [];
+    const { data: profs } = await sb.from("profiles").select("id,display_name");
+    const names = new Map(
+      (profs ?? []).map((p: { id: number; display_name: string }) => [
+        p.id,
+        p.display_name,
+      ])
+    );
+    const fundNames = new Map(funds.map((f) => [f.id, f.name]));
+    inbox = regs.map((r) => ({
+      name: fundNames.get(r.opportunity_id) ?? `Opportunity #${r.opportunity_id}`,
+      member: names.get(r.member_id) ?? "—",
+      when: r.created_at
+        ? new Date(r.created_at).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+          })
+        : "",
+      status: r.ir_status,
+    }));
+  }
 
   return (
     <>
-      <div className="mb-10">
+      <div className="mb-8">
         <p className="text-[11px] uppercase tracking-[0.3em] text-cobalt mb-3">
-          Invitations
+          Fund opportunities
         </p>
-        <h1 className="font-display text-4xl leading-tight mb-3">What&apos;s on.</h1>
+        <h1 className="font-display text-4xl leading-tight mb-3">
+          Where the room can lean in.
+        </h1>
         <p className="text-ink/55 max-w-xl">
-          Events to RSVP to, calls to put in your diary. Fund opportunities
-          arrive next.
+          Open vehicles and co-investments. Registering interest flags you to
+          IR — nothing more.
         </p>
       </div>
 
-      {items.length === 0 && (
-        <p className="text-ink/55">
-          Nothing on the calendar for your role yet. Invitations are for members
-          — switch to Eleanor to see them.
+      {/* Compliance framing — the part that matters most here. */}
+      <div className="rounded-2xl bg-amber-50/60 ring-1 ring-amber-200 p-5 mb-8 max-w-2xl">
+        <p className="text-sm text-amber-900/80 leading-relaxed">
+          Restricted to eligible investors. Everything here is information only.
+          Registering interest is an <span className="font-medium">expression
+          of interest</span> — not an offer, application, or transaction — and is
+          routed to IR for follow-up. No subscriptions or payments happen in the
+          app.
         </p>
-      )}
+      </div>
 
-      {events.length > 0 && (
-        <section className="mb-12">
-          <div className="flex items-center gap-3 mb-5">
-            <h2 className="font-display text-xl">Events</h2>
+      <div className="space-y-4 max-w-2xl">
+        {funds.map((f) => (
+          <div key={f.id} className="bg-white rounded-2xl ring-1 ring-ink/10 p-6">
+            <div className="flex items-start justify-between gap-3 mb-1">
+              <p className="font-display text-lg">{f.name}</p>
+              <span
+                className={`text-[11px] uppercase tracking-wider rounded px-2 py-0.5 shrink-0 ${
+                  STATUS_STYLE[f.status] ?? "text-ink/45 bg-ink/5"
+                }`}
+              >
+                {f.status}
+              </span>
+            </div>
+            <p className="text-sm text-ink/45 mb-3">
+              {f.kind}
+              {f.minimum && ` · minimum ${f.minimum}`}
+            </p>
+            <p className="text-sm text-ink/60 mb-5">{f.body}</p>
+
+            {!isEditor &&
+              (f.status === "closed" ? (
+                <p className="text-sm text-ink/40">This opportunity is closed.</p>
+              ) : myRegs.has(f.id) ? (
+                <p className="text-sm text-cobalt">
+                  Interest registered ✓ — IR will be in touch.
+                </p>
+              ) : (
+                <RegisterInterest opportunityId={f.id} memberId={me!.id} />
+              ))}
+          </div>
+        ))}
+      </div>
+
+      {isEditor && (
+        <section className="mt-12 max-w-2xl">
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="font-display text-xl">IR inbox</h2>
             <span className="h-px flex-1 bg-ink/10" />
           </div>
-          <div className="space-y-4 max-w-2xl">
-            {events.map((ev) => {
-              const cap = ev.capacity ?? 0;
-              const going = goingCount(ev.id);
-              const wait = waitCount(ev.id);
-              const mine = myStatus(ev.id);
-              return (
-                <div key={ev.id} className="bg-white rounded-2xl ring-1 ring-ink/10 p-6">
-                  <p className="font-display text-lg">{ev.title}</p>
-                  <p className="text-sm text-ink/45 mt-1 mb-3">
-                    {fmtDate(ev.starts_at)}
-                    <span className="mx-2 text-ink/25">·</span>
-                    {going} of {cap} seats taken
-                    {wait > 0 && ` · ${wait} on the waitlist`}
-                  </p>
-                  <p className="text-sm text-ink/60 mb-5">{ev.body}</p>
-                  <RsvpButton
-                    invitationId={ev.id}
-                    memberId={me ? me.id : null}
-                    capacity={cap}
-                    goingCount={going}
-                    myStatus={mine}
-                  />
+          <p className="text-sm text-ink/45 mb-5">
+            Expressions of interest routed to the desk.
+          </p>
+          {inbox.length === 0 ? (
+            <p className="text-sm text-ink/50">No expressions of interest yet.</p>
+          ) : (
+            <div className="bg-white rounded-2xl ring-1 ring-ink/10 overflow-hidden">
+              {inbox.map((row, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center justify-between px-5 py-3 text-sm ${
+                    i > 0 ? "border-t border-ink/10" : ""
+                  }`}
+                >
+                  <span>
+                    <span className="text-ink/80">{row.member}</span>
+                    <span className="text-ink/45"> · {row.name}</span>
+                  </span>
+                  <span className="flex items-center gap-3 text-ink/45">
+                    <span>{row.when}</span>
+                    <span className="text-[11px] uppercase tracking-wider text-cobalt bg-cobalt/5 rounded px-2 py-0.5">
+                      {row.status}
+                    </span>
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {calls.length > 0 && (
-        <section>
-          <div className="flex items-center gap-3 mb-5">
-            <h2 className="font-display text-xl">Calls &amp; firesides</h2>
-            <span className="h-px flex-1 bg-ink/10" />
-          </div>
-          <div className="space-y-4 max-w-2xl">
-            {calls.map((c) => (
-              <div key={c.id} className="bg-white rounded-2xl ring-1 ring-ink/10 p-6">
-                <p className="font-display text-lg">{c.title}</p>
-                <p className="text-sm text-ink/45 mt-1 mb-3">{fmtDate(c.starts_at)}</p>
-                <p className="text-sm text-ink/60 mb-5">{c.body}</p>
-                <AddToCalendar
-                  title={c.title}
-                  startsAt={c.starts_at ?? new Date().toISOString()}
-                  body={c.body}
-                />
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
     </>
