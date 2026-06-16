@@ -16,6 +16,7 @@ export default async function RootLayout({
   const me = await getCurrentMember();
   const members = await getAllMembers();
   const isEditor = !!(me && (me.role === "editor" || me.role === "admin"));
+  const isAdmin = !!(me && me.role === "admin");
 
   return (
     <html lang="en">
@@ -35,7 +36,7 @@ export default async function RootLayout({
         {/* Masthead */}
         <header className="border-b border-ink/10 bg-paper/90 backdrop-blur sticky top-0 z-20">
           <div className="max-w-5xl mx-auto px-4 sm:px-5 py-4">
-            <SiteNav me={me} members={members} isEditor={isEditor} />
+            <SiteNav me={me} members={members} isEditor={isEditor} isAdmin={isAdmin} />
           </div>
         </header>
 
