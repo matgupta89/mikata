@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { getSupabase } from "./supabase";
 
-// The shape of a person in the profiles table (only the bits we use).
 export type Member = {
   id: number;
   display_name: string;
@@ -10,8 +9,6 @@ export type Member = {
   status: string;
 };
 
-// Who is currently "signed in"? In this demo that's just whichever person's
-// id is stored in a cookie by the role switcher — our stand-in for real login.
 export async function getCurrentMember(): Promise<Member | null> {
   const store = await cookies();
   const id = store.get("mikata_member")?.value;
@@ -27,7 +24,6 @@ export async function getCurrentMember(): Promise<Member | null> {
   return (data as Member) ?? null;
 }
 
-// Everyone, ordered by role so the switcher reads prospect -> admin.
 export async function getAllMembers(): Promise<Member[]> {
   const sb = getSupabase();
   const { data } = await sb.from("profiles").select("*");
