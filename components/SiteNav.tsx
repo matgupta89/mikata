@@ -21,6 +21,7 @@ export default function SiteNav({
     { href: "/library", label: "Library" },
     { href: "/yomi", label: "The Yomi" },
     { href: "/invitations", label: "Invitations" },
+    { href: "/funds", label: "Funds" },
     ...(isEditor ? [{ href: "/publish", label: "Publish" }] : []),
   ];
 
