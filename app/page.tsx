@@ -1,71 +1,103 @@
-import "./globals.css";
-import type { ReactNode } from "react";
-import RoleSwitcher from "@/components/RoleSwitcher";
-import { getCurrentMember, getAllMembers } from "@/lib/auth";
+import { getCurrentMember } from "@/lib/auth";
+import { getSupabase } from "@/lib/supabase";
 
-export const metadata = {
-  title: "Mikata — Members' Platform",
-  description: "A private members' platform operated by Vitruvian Partners IR.",
+export const dynamic = "force-dynamic";
+
+type Content = {
+  id: number;
+  format: string;
+  tier: string;
+  title: string;
+  body: string | null;
 };
 
-export default async function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+const PILLARS: [string, string, string][] = [
+  ["The Library", "Curated writing in recurring formats, browsed by format — not a feed.", "Session 2"],
+  ["The Yomi", "A quarterly forecasting game. Allocate conviction, lock, see the room.", "Session 4"],
+  ["Invitations", "Events, calls, and fund opportunities, surfaced to the right members.", "Session 6"],
+];
+
+export default async function Home() {
   const me = await getCurrentMember();
-  const members = await getAllMembers();
+
+  const sb = getSupabase();
+  const { data } = await sb
+    .from("content_items")
+    .select("*")
+    .eq("is_canon", true)
+    .order("published_at", { ascending: false });
+  const canon = (data as Content[]) ?? [];
 
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Source+Sans+3:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="bg-paper text-ink font-sans min-h-screen flex flex-col">
-        {/* Masthead */}
-        <header className="border-b border-ink/10 bg-paper/90 backdrop-blur sticky top-0 z-20">
-          <div className="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between gap-4">
-            <a href="/" className="flex items-baseline gap-2">
-              <span className="font-display text-2xl tracking-tight">Mikata</span>
-              <span className="hidden sm:inline text-[11px] uppercase tracking-[0.25em] text-ink/40 mt-1">
-                Members&apos; Platform
+    <>
+      {!me ? (
+        <div className="text-center py-16">
+          <p className="text-[11px] uppercase tracking-[0.3em] text-cobalt mb-5">By invitation</p>
+          <h1 className="font-display text-4xl sm:text-5xl leading-tight mb-5">
+            A closed room for a
+            <br />
+            small, considered membership.
+          </h1>
+          <p className="text-ink/55 max-w-xl mx-auto mb-8">
+            Curated writing, a quarterly forecasting game, and invitations — for Vitruvian Partners&apos; members. Use the switcher, top right, to step in as any role and see the experience change.
+          </p>
+        </div>
+      ) : (
+        <div className="mb-12">
+          <p className="text-[11px] uppercase tracking-[0.3em] text-cobalt mb-3">Welcome back</p>
+          <h1 className="font-display text-4xl sm:text-5xl leading-tight">
+            {me.display_name.split(" ")[0]}.
+          </h1>
+          <p className="text-ink/55 mt-3 max-w-xl">
+            You&apos;re viewing Mikata as a{" "}
+            <span className="text-ink/80 font-medium">{me.role}</span>. What you can see and do changes with your role.
+          </p>
+        </div>
+      )}
+
+      {canon.length > 0 && (
+        <section className="mb-14">
+          <div className="flex items-center gap-3 mb-5">
+            <h2 className="font-display text-xl">Start here</h2>
+            <span className="h-px flex-1 bg-ink/10" />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {canon.map((item) => (
+              <article key={item.id} className="bg-white rounded-2xl ring-1 ring-ink/10 p-6 hover:ring-cobalt/40 transition">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-ink/40 mb-2">
+                  {item.tier} · {item.format}
+                </p>
+                <h3 className="font-display text-lg leading-snug mb-2">{item.title}</h3>
+                <p className="text-sm text-ink/55 leading-relaxed">
+                  {(item.body ?? "").slice(0, 140)}…
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="mb-6">
+        <div className="flex items-center gap-3 mb-5">
+          <h2 className="font-display text-xl">What Mikata does</h2>
+          <span className="h-px flex-1 bg-ink/10" />
+        </div>
+        <div className="grid sm:grid-cols-3 gap-4">
+          {PILLARS.map(([name, desc, when]) => (
+            <div key={name} className="rounded-2xl ring-1 ring-ink/10 p-6 bg-paper">
+              <h3 className="font-display text-lg mb-2">{name}</h3>
+              <p className="text-sm text-ink/55 leading-relaxed mb-4">{desc}</p>
+              <span className="text-[11px] uppercase tracking-[0.18em] text-cobalt/70">
+                Arrives in {when}
               </span>
-            </a>
-            <RoleSwitcher members={members} current={me} />
-          </div>
-        </header>
+            </div>
+          ))}
+        </div>
+      </section>
 
-        {/* Page content */}
-        <main className="flex-1 w-full max-w-5xl mx-auto px-5 py-10">
-          {children}
-        </main>
-
-        {/* Regulatory footer */}
-        <footer className="border-t border-ink/10 mt-8">
-          <div className="max-w-5xl mx-auto px-5 py-6 text-[12px] leading-relaxed text-ink/45">
-            <p className="mb-1">
-              <span className="font-display text-ink/70">Mikata</span> · A private
-              members&apos; platform operated by Vitruvian Partners Investor
-              Relations. Confidential.
-            </p>
-            <p>
-              This platform is for information only. Nothing here is an offer,
-              solicitation, or financial promotion. Fund content is restricted to
-              eligible investors and subject to compliance sign-off.{" "}
-              <span className="italic">Demo prototype — not a live system.</span>
-            </p>
-          </div>
-        </footer>
-      </body>
-    </html>
+      <p className="text-center text-[12px] text-ink/35 mt-12">
+        Session 1 of 10 · Foundation &amp; shell is live.
+      </p>
+    </>
   );
 }
