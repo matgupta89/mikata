@@ -64,8 +64,21 @@ export default function GiftLink({
     }
   }
 
-  function copy(token: string) {
+  // Open the native share sheet where available; fall back to copying.
+  async function share(token: string) {
     const url = `${window.location.origin}/share/${token}`;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: "A piece from Mikata",
+          text: "Shared with you via Mikata",
+          url,
+        });
+        return;
+      } catch {
+        return; // user dismissed the share sheet
+      }
+    }
     navigator.clipboard?.writeText(url);
     setCopied(token);
     setTimeout(() => setCopied(null), 1500);
@@ -102,10 +115,10 @@ export default function GiftLink({
                   {l.view_count}/{l.max_views} views · exp {fmt(l.expires_at)}
                 </span>
                 <button
-                  onClick={() => copy(l.token)}
+                  onClick={() => share(l.token)}
                   className="text-xs rounded-full border border-ink/15 px-3 py-1 hover:border-cobalt hover:text-cobalt transition"
                 >
-                  {copied === l.token ? "Copied ✓" : "Copy"}
+                  {copied === l.token ? "Copied ✓" : "Share"}
                 </button>
               </span>
             </div>
