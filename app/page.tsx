@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { getCurrentMember } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 
+// Render on every request so it always reflects who you're signed in as.
 export const dynamic = "force-dynamic";
 
 type Content = {
@@ -11,10 +13,27 @@ type Content = {
   body: string | null;
 };
 
-const PILLARS: [string, string, string][] = [
-  ["The Library", "Curated writing in recurring formats, browsed by format — not a feed.", "Session 2"],
-  ["The Yomi", "A quarterly forecasting game. Allocate conviction, lock, see the room.", "Session 4"],
-  ["Invitations", "Events, calls, and fund opportunities, surfaced to the right members.", "Session 6"],
+const PILLARS: { name: string; desc: string; href: string }[] = [
+  {
+    name: "The Library",
+    desc: "Curated writing in recurring formats — read by format, never a feed.",
+    href: "/library",
+  },
+  {
+    name: "The Yomi",
+    desc: "A quarterly forecasting game. Allocate conviction, lock your view, then see how the room called it.",
+    href: "/yomi",
+  },
+  {
+    name: "Ask the Room",
+    desc: "Pseudonymous discussion. Think out loud with the membership, under your handle — candour without exposure.",
+    href: "/room",
+  },
+  {
+    name: "Invitations & Funds",
+    desc: "Dinners, fireside calls and fund opportunities, surfaced to the members they're meant for.",
+    href: "/invitations",
+  },
 ];
 
 export default async function Home() {
@@ -31,73 +50,104 @@ export default async function Home() {
   return (
     <>
       {!me ? (
-        <div className="text-center py-16">
-          <p className="text-[11px] uppercase tracking-[0.3em] text-cobalt mb-5">By invitation</p>
-          <h1 className="font-display text-4xl sm:text-5xl leading-tight mb-5">
-            A closed room for a
-            <br />
-            small, considered membership.
-          </h1>
-          <p className="text-ink/55 max-w-xl mx-auto mb-8">
-            Curated writing, a quarterly forecasting game, and invitations — for Vitruvian Partners&apos; members. Use the switcher, top right, to step in as any role and see the experience change.
+        // Signed-out invitation
+        <section className="text-center py-16 sm:py-20">
+          <p className="text-[11px] uppercase tracking-[0.3em] text-cobalt mb-6">
+            By invitation
           </p>
-        </div>
+          <h1 className="font-display text-4xl sm:text-5xl leading-[1.1] mb-6 max-w-2xl mx-auto">
+            A closed room for a small, considered membership.
+          </h1>
+          <p className="text-ink/55 max-w-xl mx-auto mb-9 text-[17px] leading-relaxed">
+            Curated writing, a quarterly forecasting game, and invitations — a
+            private platform from Vitruvian Partners&apos; Investor Relations.
+          </p>
+          <Link
+            href="/library"
+            className="inline-block rounded-full bg-cobalt text-white text-sm px-6 py-3 hover:bg-cobalt/90 transition"
+          >
+            Step inside
+          </Link>
+          <p className="text-xs text-ink/35 mt-4">
+            Use the switcher, top right, to enter as any role and watch the
+            experience change.
+          </p>
+        </section>
       ) : (
-        <div className="mb-12">
-          <p className="text-[11px] uppercase tracking-[0.3em] text-cobalt mb-3">Welcome back</p>
+        // Signed-in hero
+        <section className="mb-14 pt-4">
+          <p className="text-[11px] uppercase tracking-[0.3em] text-cobalt mb-3">
+            Welcome back
+          </p>
           <h1 className="font-display text-4xl sm:text-5xl leading-tight">
             {me.display_name.split(" ")[0]}.
           </h1>
-          <p className="text-ink/55 mt-3 max-w-xl">
-            You&apos;re viewing Mikata as a{" "}
-            <span className="text-ink/80 font-medium">{me.role}</span>. What you can see and do changes with your role.
+          <p className="text-ink/55 mt-3 max-w-xl text-[17px] leading-relaxed">
+            You&apos;re in as a{" "}
+            <span className="text-ink/80 font-medium">{me.role}</span>. What you
+            can see and do shifts with your role.
           </p>
-        </div>
+        </section>
       )}
 
+      {/* Start here canon — visible to everyone, including prospects */}
       {canon.length > 0 && (
-        <section className="mb-14">
+        <section className="mb-16">
           <div className="flex items-center gap-3 mb-5">
             <h2 className="font-display text-xl">Start here</h2>
             <span className="h-px flex-1 bg-ink/10" />
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             {canon.map((item) => (
-              <article key={item.id} className="bg-white rounded-2xl ring-1 ring-ink/10 p-6 hover:ring-cobalt/40 transition">
+              <Link
+                key={item.id}
+                href={`/library/${item.id}`}
+                className="group bg-white rounded-2xl ring-1 ring-ink/10 p-6 hover:ring-cobalt/40 transition"
+              >
                 <p className="text-[11px] uppercase tracking-[0.2em] text-ink/40 mb-2">
                   {item.tier} · {item.format}
                 </p>
-                <h3 className="font-display text-lg leading-snug mb-2">{item.title}</h3>
+                <h3 className="font-display text-lg leading-snug mb-2 group-hover:text-cobalt transition">
+                  {item.title}
+                </h3>
                 <p className="text-sm text-ink/55 leading-relaxed">
                   {(item.body ?? "").slice(0, 140)}…
                 </p>
-              </article>
+              </Link>
             ))}
           </div>
         </section>
       )}
 
-      <section className="mb-6">
+      {/* The pillars — the real, built experience */}
+      <section>
         <div className="flex items-center gap-3 mb-5">
-          <h2 className="font-display text-xl">What Mikata does</h2>
+          <h2 className="font-display text-xl">Inside Mikata</h2>
           <span className="h-px flex-1 bg-ink/10" />
         </div>
-        <div className="grid sm:grid-cols-3 gap-4">
-          {PILLARS.map(([name, desc, when]) => (
-            <div key={name} className="rounded-2xl ring-1 ring-ink/10 p-6 bg-paper">
-              <h3 className="font-display text-lg mb-2">{name}</h3>
-              <p className="text-sm text-ink/55 leading-relaxed mb-4">{desc}</p>
-              <span className="text-[11px] uppercase tracking-[0.18em] text-cobalt/70">
-                Arrives in {when}
-              </span>
-            </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {PILLARS.map((p) => (
+            <Link
+              key={p.name}
+              href={p.href}
+              className="group rounded-2xl ring-1 ring-ink/10 p-6 bg-paper hover:bg-white hover:ring-cobalt/40 transition"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-display text-lg">{p.name}</h3>
+                <span className="text-cobalt/0 group-hover:text-cobalt transition text-lg leading-none">
+                  →
+                </span>
+              </div>
+              <p className="text-sm text-ink/55 leading-relaxed">{p.desc}</p>
+            </Link>
           ))}
         </div>
       </section>
 
-      <p className="text-center text-[12px] text-ink/35 mt-12">
-        Session 1 of 10 · Foundation &amp; shell is live.
+      <p className="text-center font-display text-ink/30 italic mt-16">
+        Mikata — for the few who are already in the room.
       </p>
     </>
   );
 }
+
