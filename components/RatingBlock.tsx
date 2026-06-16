@@ -5,44 +5,47 @@ import { getSupabase } from "@/lib/supabase";
 
 function StarRow({
   label,
+  tag,
+  tagClass,
   value,
-  average,
-  disabled,
+  clickable,
+  meta,
   onSet,
 }: {
   label: string;
+  tag: string;
+  tagClass: string;
   value: number;
-  average: number | null;
-  disabled: boolean;
+  clickable: boolean;
+  meta: string | null;
   onSet: (n: number) => void;
 }) {
   const [hover, setHover] = useState(0);
-  const shown = hover || value;
+  const shown = clickable ? hover || value : value;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2.5">
       <span className="w-20 text-sm text-ink/60">{label}</span>
-      <div className="flex" onMouseLeave={() => setHover(0)}>
+      <span className={`text-[10px] uppercase tracking-wider w-9 ${tagClass}`}>
+        {tag}
+      </span>
+      <div className="flex" onMouseLeave={() => clickable && setHover(0)}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
-            disabled={disabled}
-            onMouseEnter={() => !disabled && setHover(n)}
-            onClick={() => !disabled && onSet(n)}
+            disabled={!clickable}
+            onMouseEnter={() => clickable && setHover(n)}
+            onClick={() => clickable && onSet(n)}
             aria-label={`${label} ${n} of 5`}
             className={`text-xl leading-none px-0.5 ${
-              disabled ? "cursor-default" : "cursor-pointer"
+              clickable ? "cursor-pointer" : "cursor-default"
             } ${n <= shown ? "text-cobalt" : "text-ink/20"}`}
           >
             ★
           </button>
         ))}
       </div>
-      {average != null && (
-        <span className="text-xs text-ink/45 ml-1">
-          Room {average.toFixed(1)}
-        </span>
-      )}
+      {meta && <span className="text-xs text-ink/45 ml-1">{meta}</span>}
     </div>
   );
 }
@@ -66,22 +69,37 @@ export default function RatingBlock({
 }) {
   const [utility, setUtility] = useState(initialUtility);
   const [enjoyment, setEnjoyment] = useState(initialEnjoyment);
-  const disabled = memberId === null;
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">(
+    "idle"
+  );
+  const [errMsg, setErrMsg] = useState("");
+  const isMember = memberId !== null;
 
-  // One row per member per article (upsert on the unique pair). Runs in the
-  // background — no page reload, so the stars feel instant.
   async function save(u: number, e: number) {
     if (memberId === null) return;
-    const sb = getSupabase();
-    await sb.from("ratings").upsert(
-      {
-        content_id: contentId,
-        member_id: memberId,
-        utility: u || null,
-        enjoyment: e || null,
-      },
-      { onConflict: "content_id,member_id" }
-    );
+    setStatus("saving");
+    setErrMsg("");
+    try {
+      const sb = getSupabase();
+      const { error } = await sb.from("ratings").upsert(
+        {
+          content_id: contentId,
+          member_id: memberId,
+          utility: u || null,
+          enjoyment: e || null,
+        },
+        { onConflict: "content_id,member_id" }
+      );
+      if (error) {
+        setStatus("error");
+        setErrMsg(error.message);
+      } else {
+        setStatus("saved");
+      }
+    } catch (e2: unknown) {
+      setStatus("error");
+      setErrMsg(e2 instanceof Error ? e2.message : String(e2));
+    }
   }
 
   function setU(n: number) {
@@ -93,33 +111,83 @@ export default function RatingBlock({
     save(utility, n);
   }
 
+  const roundedU = avgUtility != null ? Math.round(avgUtility) : 0;
+  const roundedE = avgEnjoyment != null ? Math.round(avgEnjoyment) : 0;
+
   return (
     <div className="rounded-2xl ring-1 ring-ink/10 p-5 bg-white mt-6">
       <p className="text-[11px] uppercase tracking-[0.2em] text-ink/40 mb-4">
         How the room rates this
         {count > 0 && ` · ${count} ${count === 1 ? "rating" : "ratings"}`}
       </p>
+
       <div className="space-y-3">
-        <StarRow
-          label="Useful"
-          value={utility}
-          average={avgUtility}
-          disabled={disabled}
-          onSet={setU}
-        />
-        <StarRow
-          label="Enjoyable"
-          value={enjoyment}
-          average={avgEnjoyment}
-          disabled={disabled}
-          onSet={setE}
-        />
+        {isMember ? (
+          <>
+            <StarRow
+              label="Useful"
+              tag="You"
+              tagClass="text-cobalt/70"
+              value={utility}
+              clickable
+              meta={avgUtility != null ? `Room ${avgUtility.toFixed(1)}` : null}
+              onSet={setU}
+            />
+            <StarRow
+              label="Enjoyable"
+              tag="You"
+              tagClass="text-cobalt/70"
+              value={enjoyment}
+              clickable
+              meta={
+                avgEnjoyment != null ? `Room ${avgEnjoyment.toFixed(1)}` : null
+              }
+              onSet={setE}
+            />
+          </>
+        ) : (
+          <>
+            <StarRow
+              label="Useful"
+              tag="Room"
+              tagClass="text-ink/40"
+              value={roundedU}
+              clickable={false}
+              meta={avgUtility != null ? avgUtility.toFixed(1) : "no ratings yet"}
+              onSet={() => {}}
+            />
+            <StarRow
+              label="Enjoyable"
+              tag="Room"
+              tagClass="text-ink/40"
+              value={roundedE}
+              clickable={false}
+              meta={
+                avgEnjoyment != null ? avgEnjoyment.toFixed(1) : "no ratings yet"
+              }
+              onSet={() => {}}
+            />
+          </>
+        )}
       </div>
-      <p className="text-xs text-ink/40 mt-4">
-        {disabled
-          ? "Sign in as a member to add your rating."
-          : "Your rating is highlighted in blue. Tap a star to change it."}
-      </p>
+
+      <div className="mt-4 text-xs">
+        {!isMember && (
+          <span className="text-ink/40">Sign in as a member to add your rating.</span>
+        )}
+        {isMember && status === "idle" && (
+          <span className="text-ink/40">
+            Blue stars are your rating. Tap to change.
+          </span>
+        )}
+        {status === "saving" && <span className="text-ink/40">Saving…</span>}
+        {status === "saved" && (
+          <span className="text-cobalt">Saved ✓ — your rating is recorded.</span>
+        )}
+        {status === "error" && (
+          <span className="text-red-600">Couldn&apos;t save: {errMsg}</span>
+        )}
+      </div>
     </div>
   );
 }
