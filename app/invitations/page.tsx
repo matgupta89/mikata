@@ -99,22 +99,21 @@ export default async function Invitations() {
               const mine = myStatus(ev.id);
               return (
                 <div key={ev.id} className="bg-white rounded-2xl ring-1 ring-ink/10 p-6">
-                  <p className="font-display text-lg mb-1">{ev.title}</p>
-                  <p className="text-sm text-ink/50 mb-3">{fmtDate(ev.starts_at)}</p>
-                  <p className="text-sm text-ink/60 mb-4">{ev.body}</p>
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <RsvpButton
-                      invitationId={ev.id}
-                      memberId={me ? me.id : null}
-                      capacity={cap}
-                      goingCount={going}
-                      myStatus={mine}
-                    />
-                    <span className="text-xs text-ink/45">
-                      {going} of {cap} seats taken
-                      {wait > 0 && ` · ${wait} on the waitlist`}
-                    </span>
-                  </div>
+                  <p className="font-display text-lg">{ev.title}</p>
+                  <p className="text-sm text-ink/45 mt-1 mb-3">
+                    {fmtDate(ev.starts_at)}
+                    <span className="mx-2 text-ink/25">·</span>
+                    {going} of {cap} seats taken
+                    {wait > 0 && ` · ${wait} on the waitlist`}
+                  </p>
+                  <p className="text-sm text-ink/60 mb-5">{ev.body}</p>
+                  <RsvpButton
+                    invitationId={ev.id}
+                    memberId={me ? me.id : null}
+                    capacity={cap}
+                    goingCount={going}
+                    myStatus={mine}
+                  />
                 </div>
               );
             })}
@@ -131,9 +130,9 @@ export default async function Invitations() {
           <div className="space-y-4 max-w-2xl">
             {calls.map((c) => (
               <div key={c.id} className="bg-white rounded-2xl ring-1 ring-ink/10 p-6">
-                <p className="font-display text-lg mb-1">{c.title}</p>
-                <p className="text-sm text-ink/50 mb-3">{fmtDate(c.starts_at)}</p>
-                <p className="text-sm text-ink/60 mb-4">{c.body}</p>
+                <p className="font-display text-lg">{c.title}</p>
+                <p className="text-sm text-ink/45 mt-1 mb-3">{fmtDate(c.starts_at)}</p>
+                <p className="text-sm text-ink/60 mb-5">{c.body}</p>
                 <AddToCalendar
                   title={c.title}
                   startsAt={c.starts_at ?? new Date().toISOString()}
