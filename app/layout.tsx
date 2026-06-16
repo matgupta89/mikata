@@ -39,11 +39,11 @@ export default async function RootLayout({
             <div className="flex items-baseline gap-3 sm:gap-6 min-w-0">
               <Link href="/" className="flex items-baseline gap-2 shrink-0">
                 <span className="font-display text-xl sm:text-2xl tracking-tight">Mikata</span>
-                <span className="hidden md:inline text-[11px] uppercase tracking-[0.25em] text-ink/40 mt-1">
+                <span className="hidden lg:inline text-[11px] uppercase tracking-[0.25em] text-ink/40 mt-1">
                   Members&apos; Platform
                 </span>
               </Link>
-              <nav className="flex items-center gap-4 sm:gap-5 text-sm text-ink/55">
+              <nav className="flex items-center gap-3.5 sm:gap-5 text-sm text-ink/55">
                 <Link href="/" className="hover:text-cobalt transition">
                   Home
                 </Link>
@@ -52,6 +52,9 @@ export default async function RootLayout({
                 </Link>
                 <Link href="/yomi" className="hover:text-cobalt transition">
                   The Yomi
+                </Link>
+                <Link href="/invitations" className="hover:text-cobalt transition">
+                  Invitations
                 </Link>
                 {isEditor && (
                   <Link href="/publish" className="hover:text-cobalt transition">
