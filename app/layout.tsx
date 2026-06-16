@@ -1,7 +1,6 @@
 import "./globals.css";
 import type { ReactNode } from "react";
-import Link from "next/link";
-import RoleSwitcher from "@/components/RoleSwitcher";
+import SiteNav from "@/components/SiteNav";
 import { getCurrentMember, getAllMembers } from "@/lib/auth";
 
 export const metadata = {
@@ -16,7 +15,7 @@ export default async function RootLayout({
 }) {
   const me = await getCurrentMember();
   const members = await getAllMembers();
-  const isEditor = me && (me.role === "editor" || me.role === "admin");
+  const isEditor = !!(me && (me.role === "editor" || me.role === "admin"));
 
   return (
     <html lang="en">
@@ -35,35 +34,8 @@ export default async function RootLayout({
       <body className="bg-paper text-ink font-sans min-h-screen flex flex-col">
         {/* Masthead */}
         <header className="border-b border-ink/10 bg-paper/90 backdrop-blur sticky top-0 z-20">
-          <div className="max-w-5xl mx-auto px-4 sm:px-5 py-4 flex items-center justify-between gap-3">
-            <div className="flex items-baseline gap-3 sm:gap-6 min-w-0">
-              <Link href="/" className="flex items-baseline gap-2 shrink-0">
-                <span className="font-display text-xl sm:text-2xl tracking-tight">Mikata</span>
-                <span className="hidden lg:inline text-[11px] uppercase tracking-[0.25em] text-ink/40 mt-1">
-                  Members&apos; Platform
-                </span>
-              </Link>
-              <nav className="flex items-center gap-3.5 sm:gap-5 text-sm text-ink/55">
-                <Link href="/" className="hover:text-cobalt transition">
-                  Home
-                </Link>
-                <Link href="/library" className="hover:text-cobalt transition">
-                  Library
-                </Link>
-                <Link href="/yomi" className="hover:text-cobalt transition">
-                  The Yomi
-                </Link>
-                <Link href="/invitations" className="hover:text-cobalt transition">
-                  Invitations
-                </Link>
-                {isEditor && (
-                  <Link href="/publish" className="hover:text-cobalt transition">
-                    Publish
-                  </Link>
-                )}
-              </nav>
-            </div>
-            <RoleSwitcher members={members} current={me} />
+          <div className="max-w-5xl mx-auto px-4 sm:px-5 py-4">
+            <SiteNav me={me} members={members} isEditor={isEditor} />
           </div>
         </header>
 
