@@ -1,9 +1,25 @@
-import { createClient } from "@supabase/supabase-js";
-
-// Created on demand (not at import time) so a missing env var never breaks
-// the build — it only matters when a page actually talks to the database.
-export function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
-  return createClient(url, key);
+{
+  "name": "mikata",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.6.0"
+  }
 }
