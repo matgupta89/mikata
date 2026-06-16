@@ -9,10 +9,12 @@ export default function SiteNav({
   me,
   members,
   isEditor,
+  isAdmin,
 }: {
   me: Member | null;
   members: Member[];
   isEditor: boolean;
+  isAdmin: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -23,6 +25,8 @@ export default function SiteNav({
     { href: "/invitations", label: "Invitations" },
     { href: "/funds", label: "Funds" },
     ...(isEditor ? [{ href: "/publish", label: "Publish" }] : []),
+    ...(me ? [{ href: "/profile", label: "My Mikata" }] : []),
+    ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
   ];
 
   return (
