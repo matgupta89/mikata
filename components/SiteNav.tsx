@@ -24,6 +24,7 @@ export default function SiteNav({
     { href: "/yomi", label: "The Yomi" },
     { href: "/invitations", label: "Invitations" },
     { href: "/funds", label: "Funds" },
+    ...(me ? [{ href: "/room", label: "Ask the Room" }] : []),
     ...(isEditor ? [{ href: "/publish", label: "Publish" }] : []),
     ...(me ? [{ href: "/profile", label: "My Mikata" }] : []),
     ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
