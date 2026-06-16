@@ -50,6 +50,9 @@ export default async function RootLayout({
                 <Link href="/library" className="hover:text-cobalt transition">
                   Library
                 </Link>
+                <Link href="/yomi" className="hover:text-cobalt transition">
+                  The Yomi
+                </Link>
                 {isEditor && (
                   <Link href="/publish" className="hover:text-cobalt transition">
                     Publish
