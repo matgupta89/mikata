@@ -62,13 +62,7 @@ export default async function Home() {
             Curated writing, a quarterly forecasting game, and invitations — a
             private platform from Vitruvian Partners&apos; Investor Relations.
           </p>
-          <Link
-            href="/library"
-            className="inline-block rounded-full bg-cobalt text-white text-sm px-6 py-3 hover:bg-cobalt/90 transition"
-          >
-            Step inside
-          </Link>
-          <p className="text-xs text-ink/35 mt-4">
+          <p className="text-xs text-ink/35">
             Use the switcher, top right, to enter as any role and watch the
             experience change.
           </p>
@@ -127,19 +121,13 @@ export default async function Home() {
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
           {PILLARS.map((p) => (
-            <Link
+            <div
               key={p.name}
-              href={p.href}
-              className="group rounded-2xl ring-1 ring-ink/10 p-6 bg-paper hover:bg-white hover:ring-cobalt/40 transition"
+              className="rounded-2xl ring-1 ring-ink/10 p-6 bg-paper"
             >
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-display text-lg">{p.name}</h3>
-                <span className="text-cobalt/0 group-hover:text-cobalt transition text-lg leading-none">
-                  →
-                </span>
-              </div>
+              <h3 className="font-display text-lg mb-2">{p.name}</h3>
               <p className="text-sm text-ink/55 leading-relaxed">{p.desc}</p>
-            </Link>
+            </div>
           ))}
         </div>
       </section>
