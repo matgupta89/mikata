@@ -3,6 +3,7 @@ import { getCurrentMember } from "@/lib/auth";
 import { getSupabase } from "@/lib/supabase";
 import { visibleVisibilities } from "@/lib/visibility";
 import SaveButton from "@/components/SaveButton";
+import RatingBlock from "@/components/RatingBlock";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,17 @@ type Item = {
   visibility: string;
   author_id: number | null;
 };
+
+type Rating = {
+  utility: number | null;
+  enjoyment: number | null;
+  member_id: number;
+};
+
+function average(vals: (number | null)[]): number | null {
+  const nums = vals.filter((v): v is number => v != null);
+  return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
+}
 
 export default async function ContentDetail({
   params,
@@ -85,6 +97,16 @@ export default async function ContentDetail({
     saved = !!s;
   }
 
+  // Ratings: the room's averages, plus this member's own.
+  const { data: rData } = await sb
+    .from("ratings")
+    .select("utility,enjoyment,member_id")
+    .eq("content_id", item.id);
+  const ratings = (rData as Rating[]) ?? [];
+  const avgUtility = average(ratings.map((r) => r.utility));
+  const avgEnjoyment = average(ratings.map((r) => r.enjoyment));
+  const mine = me ? ratings.find((r) => r.member_id === me.id) : undefined;
+
   return (
     <>
       {back}
@@ -106,10 +128,18 @@ export default async function ContentDetail({
             memberId={me ? me.id : null}
             initialSaved={saved}
           />
-          <span className="text-sm text-ink/40">
-            Published by the IR desk
-          </span>
+          <span className="text-sm text-ink/40">Published by the IR desk</span>
         </div>
+
+        <RatingBlock
+          contentId={item.id}
+          memberId={me ? me.id : null}
+          initialUtility={mine?.utility ?? 0}
+          initialEnjoyment={mine?.enjoyment ?? 0}
+          avgUtility={avgUtility}
+          avgEnjoyment={avgEnjoyment}
+          count={ratings.length}
+        />
       </article>
     </>
   );
