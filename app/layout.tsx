@@ -16,6 +16,7 @@ export default async function RootLayout({
 }) {
   const me = await getCurrentMember();
   const members = await getAllMembers();
+  const isEditor = me && (me.role === "editor" || me.role === "admin");
 
   return (
     <html lang="en">
@@ -42,7 +43,6 @@ export default async function RootLayout({
                   Members&apos; Platform
                 </span>
               </Link>
-              {/* Nav: visible on mobile too, so the Library is reachable from a phone */}
               <nav className="flex items-center gap-4 sm:gap-5 text-sm text-ink/55">
                 <Link href="/" className="hover:text-cobalt transition">
                   Home
@@ -50,6 +50,11 @@ export default async function RootLayout({
                 <Link href="/library" className="hover:text-cobalt transition">
                   Library
                 </Link>
+                {isEditor && (
+                  <Link href="/publish" className="hover:text-cobalt transition">
+                    Publish
+                  </Link>
+                )}
               </nav>
             </div>
             <RoleSwitcher members={members} current={me} />
