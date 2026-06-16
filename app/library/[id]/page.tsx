@@ -5,6 +5,8 @@ import { visibleVisibilities } from "@/lib/visibility";
 import SaveButton from "@/components/SaveButton";
 import RatingBlock from "@/components/RatingBlock";
 import GiftLink from "@/components/GiftLink";
+import CommentComposer from "@/components/CommentComposer";
+import Thread, { type Comment } from "@/components/Thread";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +135,33 @@ export default async function ContentDetail({
     giftExisting = all.filter((l) => l.content_id === item.id);
   }
 
+  // Discussion ("Ask the Room", scoped to this piece).
+  const canPost = !!me && me.role !== "prospect";
+  const { data: cData } = await sb
+    .from("comments")
+    .select("*")
+    .eq("content_id", item.id)
+    .order("created_at", { ascending: true });
+  let comments = (cData as Comment[]) ?? [];
+  if (!isEditor) comments = comments.filter((c) => !c.hidden);
+
+  const handles: Record<number, string> = {};
+  const memberIds = Array.from(new Set(comments.map((c) => c.member_id)));
+  if (memberIds.length) {
+    const { data: pData } = await sb
+      .from("profiles")
+      .select("id,yomi_handle,display_name")
+      .in("id", memberIds);
+    (pData as { id: number; yomi_handle: string | null; display_name: string }[] | null)?.forEach(
+      (p) => {
+        handles[p.id] = p.yomi_handle ?? p.display_name;
+      }
+    );
+  }
+  const tops = comments.filter((c) => c.parent_id == null);
+  const repliesOf = (cid: number) =>
+    comments.filter((c) => c.parent_id === cid);
+
   return (
     <>
       {back}
@@ -176,6 +205,39 @@ export default async function ContentDetail({
             existing={giftExisting}
           />
         )}
+
+        {/* Discuss */}
+        <section className="mt-10">
+          <h2 className="font-display text-xl mb-4">Discuss in the Room</h2>
+          <div className="mb-5">
+            <CommentComposer
+              memberId={me ? me.id : null}
+              contentId={item.id}
+              canPost={canPost}
+              placeholder="Pass comment on this piece…"
+              cta="Post to the room"
+            />
+          </div>
+          {tops.length === 0 ? (
+            <p className="text-sm text-ink/40">
+              No comments yet on this piece.
+            </p>
+          ) : (
+            <div className="space-y-5">
+              {tops.map((post) => (
+                <Thread
+                  key={post.id}
+                  post={post}
+                  replies={repliesOf(post.id)}
+                  handles={handles}
+                  viewerId={me ? me.id : null}
+                  canPost={canPost}
+                  isEditor={isEditor}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       </article>
     </>
   );
