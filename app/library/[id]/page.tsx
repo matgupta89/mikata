@@ -4,6 +4,7 @@ import { getSupabase } from "@/lib/supabase";
 import { visibleVisibilities } from "@/lib/visibility";
 import SaveButton from "@/components/SaveButton";
 import RatingBlock from "@/components/RatingBlock";
+import GiftLink from "@/components/GiftLink";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ type Item = {
   title: string;
   body: string | null;
   visibility: string;
+  shareable: boolean;
   author_id: number | null;
 };
 
@@ -23,10 +25,20 @@ type Rating = {
   member_id: number;
 };
 
+type ShareRow = {
+  token: string;
+  view_count: number;
+  max_views: number | null;
+  expires_at: string | null;
+  content_id: number;
+};
+
 function average(vals: (number | null)[]): number | null {
   const nums = vals.filter((v): v is number => v != null);
   return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
 }
+
+const GIFT_ALLOWANCE = 3;
 
 export default async function ContentDetail({
   params,
@@ -62,7 +74,6 @@ export default async function ContentDetail({
     );
   }
 
-  // Gate: can this viewer see this piece?
   const allowed = visibleVisibilities(me?.role ?? null);
   if (!allowed.includes(item.visibility)) {
     return (
@@ -85,7 +96,7 @@ export default async function ContentDetail({
     );
   }
 
-  // Is it already saved by the current member?
+  // Saved?
   let saved = false;
   if (me) {
     const { data: s } = await sb
@@ -97,7 +108,7 @@ export default async function ContentDetail({
     saved = !!s;
   }
 
-  // Ratings: the room's averages, plus this member's own.
+  // Ratings.
   const { data: rData } = await sb
     .from("ratings")
     .select("utility,enjoyment,member_id")
@@ -106,6 +117,21 @@ export default async function ContentDetail({
   const avgUtility = average(ratings.map((r) => r.utility));
   const avgEnjoyment = average(ratings.map((r) => r.enjoyment));
   const mine = me ? ratings.find((r) => r.member_id === me.id) : undefined;
+
+  // Gift links — only for shareable pieces, only for members/editors.
+  const canGift = !!me && me.role !== "prospect" && item.shareable;
+  let giftRemaining = 0;
+  let giftExisting: ShareRow[] = [];
+  const isEditor = !!me && (me.role === "editor" || me.role === "admin");
+  if (canGift) {
+    const { data: myLinks } = await sb
+      .from("share_links")
+      .select("token,view_count,max_views,expires_at,content_id")
+      .eq("created_by", me!.id);
+    const all = (myLinks as ShareRow[]) ?? [];
+    giftRemaining = isEditor ? Infinity : Math.max(0, GIFT_ALLOWANCE - all.length);
+    giftExisting = all.filter((l) => l.content_id === item.id);
+  }
 
   return (
     <>
@@ -140,6 +166,16 @@ export default async function ContentDetail({
           avgEnjoyment={avgEnjoyment}
           count={ratings.length}
         />
+
+        {canGift && (
+          <GiftLink
+            contentId={item.id}
+            memberId={me!.id}
+            isEditor={isEditor}
+            remaining={giftRemaining}
+            existing={giftExisting}
+          />
+        )}
       </article>
     </>
   );
