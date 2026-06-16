@@ -1,6 +1,8 @@
-node_modules
-.next
-.env
-.env.local
-.DS_Store
-*.log
+const config = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+
+export default config;
